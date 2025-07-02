@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>The King's Man</title>
+  <style>
+    body {
+      background-color: #111;
+      color: #eee;
+      font-family: 'Courier New', monospace;
+      padding: 20px;
+      transition: background-color 1s, color 1s;
+    }
+
+    .text-line {
+      margin: 10px 0;
+    }
+
+    .choices {
+      margin-top: 10px;
+    }
+
+    button {
+      margin: 5px;
+      padding: 10px;
+      background-color: #333;
+      color: #eee;
+      border: 1px solid #555;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #555;
+    }
+
+    /* Glow effect */
+    .glow {
+      color: #00f0ff;
+      text-shadow: 0 0 10px #00f0ff;
+    }
+
+    /* Corrode effect container */
+    .corrode span {
+      transition: opacity 0.05s;
+      display: inline-block;
+    }
+
+    /* Day mode */
+    .day-mode {
+      background-color: #ddd;
+      color: #222;
+    }
+  </style>
+</head>
+<body>
+  <div id="story"></div>
+  <div class="choices" id="choices"></div>
+
+  <script>
+    const storyElement = document.getElementById('story');
+    const choicesElement = document.getElementById('choices');
+
+    function applyGlobalEffect(tag) {
+      if (tag === 'day') {
+        document.body.classList.add('day-mode');
+      } else if (tag === 'night') {
+        document.body.classList.remove('day-mode');
+      }
+    }
+
+    function typeLine(rawText, callback) {
+      rawText = rawText.trim();
+
+      const parts = [];
+      const regex = /\[(\w+)\](.*?)\[\/\1\]/g;
+      let lastIndex = 0;
+      let match;
+
+      while ((match = regex.exec(rawText)) !== null) {
+        if (match.index > lastIndex) {
+          parts.push({ text: rawText.substring(lastIndex, match.index), effect: null });
+        }
+        parts.push({ text: match[2], effect: match[1].toLowerCase() });
+        lastIndex = regex.lastIndex;
+      }
+      if (lastIndex < rawText.length) {
+        parts.push({ text: rawText.substring(lastIndex), effect: null });
+      }
+
+      if (parts.length === 1 && parts[0].text === '' && (parts[0].effect === 'day' || parts[0].effect === 'night')) {
+        applyGlobalEffect(parts[0].effect);
+        if (callback) callback();
+        return;
+      }
+
+      const line = document.createElement('div');
+      line.className = 'text-line';
+      storyElement.appendChild(line);
+
+      let partIndex = 0;
+
+      function typePart() {
+        if (partIndex >= parts.length) {
+          const corrodeSpans = [...line.querySelectorAll('.corrode span')];
+          if (corrodeSpans.length > 0) {
+            setTimeout(() => fadeOutChars(corrodeSpans, callback), 500);
+          } else {
+            if (callback) callback();
+          }
+          return;
+        }
+
+        const part = parts[partIndex];
+        const chars = part.text.split('');
+        const span = document.createElement('span');
+        if (part.effect === 'glow') span.classList.add('glow');
+        if (part.effect === 'corrode') span.classList.add('corrode');
+        line.appendChild(span);
+
+        let i = 0;
+        function typeChar() {
+          if (i < chars.length) {
+            const charSpan = document.createElement('span');
+            charSpan.textContent = chars[i];
+            span.appendChild(charSpan);
+            i++;
+            setTimeout(typeChar, 30);
+          } else {
+            partIndex++;
+            typePart();
+          }
+        }
+        typeChar();
+      }
+
+      function fadeOutChars(charSpans, done) {
+        let j = 0;
+        function fadeNext() {
+          if (j < charSpans.length) {
+            const span = charSpans[j];
+            span.style.opacity = '0';
+            j++;
+            setTimeout(fadeNext, 30);
+          } else if (done) {
+            done();
+          }
+        }
+        fadeNext();
+      }
+
+      typePart();
+    }
+
+    function showScene(scene, clear = false) {
+      if (clear) storyElement.innerHTML = '';
+      choicesElement.innerHTML = '';
+
+      const lines = scene.text.split(/\n+/);
+      let current = 0;
+
+      function nextLine() {
+        if (current < lines.length) {
+          typeLine(lines[current].trim(), () => {
+            storyElement.appendChild(document.createElement('br'));
+            current++;
+            nextLine();
+          });
+        } else {
+          scene.choices.forEach(choice => {
+            const btn = document.createElement('button');
+            btn.textContent = choice.text;
+            btn.onclick = () => showScene(choice.next);
+            choicesElement.appendChild(btn);
+          });
+        }
+      }
+
+      nextLine();
+    }
+
+    const storyStart = {
+      text: `
+Your eyes snap open as you struggle for a breath, [glow]electric blue lines[/glow] flashing across your vision & thunder clamoring in your ear.
+
+All you want, for a brief moment, is to return to the void that held you in your slumber for... how many years?
+
+As you begin to think, to reason, your senses calm and your panic is locked away in the recesses of your mind.
+[day][/day]
+`,
+      choices: [
+        {
+          text: "Well, what if there was a puzzle that involved remembering a code?.",
+          next: {
+            text: "[corrode]2034[/corrode]",
+            choices: [
+              {
+                text: "2034",
+                next: {
+                  text: `
+Nice, reload the page to explore the other choices
+`,
+                  choices: []
+                }
+              },
+              {
+                text: "2O34",
+                next: {
+                  text: `
+[night][/night]
+You fucking idiot, that was a 0 not an O.
+`,
+                  choices: []
+                }
+              }
+            ]
+          }
+        },
+        {
+          text: "I also want to make a dropdown selector function...",
+          next: {
+            text: `
+Maybe one that stores variables on the website instance, allowing you to choose certain paths if you had certain skills?
+`,
+            choices: [
+              {
+                text: "Not much else to see here tbh.",
+                next: {
+                  text: `
+Ok but what if there was also like, an inventory? Skills, inventory, classes... and hoo boy I can't wait for the combat.
+`,
+                  choices: []
+                }
+              }
+            ]
+          }
+        }
+      ]
+    };
+
+    // Start fresh (clear story)
+    showScene(storyStart, true);
+  </script>
+</body>
+</html>
+
+
