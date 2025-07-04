@@ -96,6 +96,7 @@ body.day-mode {
   margin: 0;
 }
 #inventory-list li {
+  cursor: help;
   margin: 5px 0;
   display: flex;
   justify-content: space-between;
